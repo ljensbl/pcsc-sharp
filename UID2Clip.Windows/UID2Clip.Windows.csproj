@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\PCSC.Iso7816\PCSC.Iso7816.csproj" />
+    <ProjectReference Include="..\src\PCSC\PCSC.csproj" />
+  </ItemGroup>
+
+</Project>
