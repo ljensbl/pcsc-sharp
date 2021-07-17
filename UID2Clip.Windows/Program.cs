@@ -14,14 +14,27 @@ namespace UID2Clip.Windows {
         Dec
     };
 
-    internal enum ByteOrder {
-        BigEndian,
-        LittleEndian
-    };
-
     public class Program {
-        private static string _newUid = String.Empty;
+        private static string _newUid = string.Empty;
         private static bool _dataAvailable = false;
+
+        private static string FormatForOuput(string uid, OutputFormat format = OutputFormat.Hex, bool byteOrderReversed = false, int bits = 0, string separator = ":") {
+            string result = string.Empty;
+            var words = uid.Split('-');
+            
+            if (byteOrderReversed) {
+                Array.Reverse(words);
+            }
+
+            if (format == OutputFormat.Hex) {
+                result = String.Join(separator, words);
+            }
+            else {
+                var hexString = string.Join("", words);
+                result = Convert.ToUInt64(hexString, 16).ToString();
+            }
+            return result;
+        }
 
         [STAThread]
         public static void Main() {
@@ -49,9 +62,10 @@ namespace UID2Clip.Windows {
                 while (true) {
                     if (_dataAvailable) {
                         var latestClipboardEntry = Clipboard.GetText();
-                        if (latestClipboardEntry != _newUid) {
-                            Clipboard.SetText(_newUid);
-                            Console.WriteLine($"Wrote {_newUid} to the Clipboard");
+                        var formattedUid = FormatForOuput(_newUid, OutputFormat.Dec, true);
+                        if (latestClipboardEntry != formattedUid) {
+                            Clipboard.SetText(formattedUid);
+                            Console.WriteLine($"Wrote {formattedUid} to the Clipboard");
                         }
                         _dataAvailable = false;
                     }
@@ -118,7 +132,7 @@ namespace UID2Clip.Windows {
         private static bool IsEmpty(ICollection<string> readerNames) => readerNames == null || readerNames.Count < 1;
 
         private static string GetUidString(string readerName) {
-            string Uid = String.Empty;
+            var uid = string.Empty;
 
             using (var context = ContextFactory.Instance.Establish(SCardScope.System)) {
                 using (var rfidReader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any)) {
@@ -149,11 +163,11 @@ namespace UID2Clip.Windows {
                             new ResponseApdu(receiveBuffer, bytesReceived, IsoCase.Case2Short, rfidReader.Protocol);
 
                         if (responseApdu.HasData) {
-                            Uid = BitConverter.ToString(responseApdu.GetData());
+                            uid = BitConverter.ToString(responseApdu.GetData());
                         }
                     }
                 }
-                return Uid;
+                return uid;
             }
         }
     }
