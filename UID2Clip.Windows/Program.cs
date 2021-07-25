@@ -27,7 +27,7 @@ namespace UID2Clip.Windows {
             }
 
             if (format == OutputFormat.Hex) {
-                result = String.Join(separator, words);
+                result = string.Join(separator, words);
             }
             else {
                 var hexString = string.Join("", words);
@@ -62,7 +62,7 @@ namespace UID2Clip.Windows {
                 while (true) {
                     if (_dataAvailable) {
                         var latestClipboardEntry = Clipboard.GetText();
-                        var formattedUid = FormatForOuput(_newUid, OutputFormat.Dec, true);
+                        var formattedUid = FormatForOuput(_newUid, OutputFormat.Hex, false, 0, string.Empty);
                         if (latestClipboardEntry != formattedUid) {
                             Clipboard.SetText(formattedUid);
                             Console.WriteLine($"Wrote {formattedUid} to the Clipboard");
