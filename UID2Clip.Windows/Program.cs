@@ -54,36 +54,49 @@ namespace UID2Clip.Windows {
             Console.WriteLine("This program will monitor all SmartCard readers or keyboard and send Uid's to Clipboard.");
 
             Parser.Default.ParseArguments<Options>(args)
-                .WithParsed<Options>(o => {
+                .WithParsed(o => {
                     if (o.ReaderType == ReaderType.PCSC) {
-                        UsePCSCReader();
+                        UsePCSCReader(UidFormat.HEX, o.UidOutputFormat);
                     } else {
-                        Console.WriteLine($"Input format {o.UidInputFormat}");
-                        Console.WriteLine($"Output format {o.UidOutputFormat}");
-                        if (o.UidInputFormat == UidFormat.Default) {
-                            throw new Exception("Input format cannot be default for HID devices.");
-                        }
-
-                        while (true) {
-                            string input = Console.ReadLine();
-                            if (input == string.Empty) {
-                                Console.WriteLine("Exiting");
-                                return;
-                            } else {
-                                ulong keyId = UidHelper.UidHelper.ParseUid(o.UidInputFormat, input, '-');
-                                string result = UidHelper.UidHelper.FormatUid(keyId, o.UidOutputFormat);
-                                var latestClipboardEntry = Clipboard.GetText();
-                                if (latestClipboardEntry != result) {
-                                    Clipboard.SetText(result);
-                                    Console.WriteLine($"Wrote {result} to the Clipboard");
-                                }
-                            }
-                        }
+                        UseHIDReader(o.UidInputFormat, o.UidOutputFormat);
+                        return;
                     }
                 });
         }
 
-        private static void UsePCSCReader() {
+        private static void UseHIDReader(UidFormat inputFormat, UidFormat outputFormat) {
+            if (inputFormat == UidFormat.Default) {
+                throw new Exception("Input format cannot be default for HID devices.");
+            }
+
+            Console.WriteLine($"Input format {inputFormat}");
+            Console.WriteLine($"Output format {outputFormat}\n");
+            Console.WriteLine($"Enter card number, press [ENTER], input empty line to exit");
+
+            while (true) {
+                string input = Console.ReadLine();
+                if (input == string.Empty) {
+                    Console.WriteLine("Exiting");
+                    return;
+                } else {
+                    try {
+                        ulong keyId = UidHelper.UidHelper.ParseUid(inputFormat, input, '-');
+                        string result = UidHelper.UidHelper.FormatUid(keyId, outputFormat);
+                        var latestClipboardEntry = Clipboard.GetText();
+                        if (latestClipboardEntry != result) {
+                            Clipboard.SetText(result);
+                            Console.WriteLine($"Wrote {result} to the Clipboard");
+                        }
+                        Console.WriteLine($"Enter number, press [ENTER], input empty line to exit");
+                    }
+                    catch(FormatException e) {
+                        Console.WriteLine("Error in input, please try again.");
+                    }
+                }
+            }
+        }
+
+        private static void UsePCSCReader(UidFormat inputFormat = UidFormat.HEX, UidFormat outputFormat = UidFormat.HEX) {
             // Retrieve the names of all installed readers.
             var readerNames = GetReaderNames();
 
@@ -106,7 +119,8 @@ namespace UID2Clip.Windows {
                 while (true) {
                     if (_dataAvailable) {
                         var latestClipboardEntry = Clipboard.GetText();
-                        var formattedUid = FormatForOuput(_newUid, OutputFormat.Hex, false, 0, string.Empty);
+                        ulong cardid = UidHelper.UidHelper.ParseUid(inputFormat, _newUid, '-');
+                        string formattedUid = UidHelper.UidHelper.FormatUid(cardid, outputFormat);
                         if (latestClipboardEntry != formattedUid) {
                             Clipboard.SetText(formattedUid);
                             Console.WriteLine($"Wrote {formattedUid} to the Clipboard");
