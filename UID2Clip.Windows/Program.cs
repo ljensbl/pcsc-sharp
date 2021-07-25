@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Threading;
 using System.Windows.Forms;
 using PCSC;
@@ -7,6 +9,7 @@ using PCSC.Exceptions;
 using PCSC.Iso7816;
 using PCSC.Monitoring;
 using PCSC.Utils;
+using UidHelper;
 
 namespace UID2Clip.Windows {
     internal enum OutputFormat {
@@ -37,9 +40,46 @@ namespace UID2Clip.Windows {
         }
 
         [STAThread]
-        public static void Main() {
-            Console.WriteLine("This program will monitor all SmartCard readers and send Uid's to Clipboard.");
+        public static void Main(string[] args) {
 
+            var rootCommand = new RootCommand();
+            rootCommand.Add(new Option<ReaderType>("--reader-type"));
+            rootCommand.Add(new Option<UidFormat>("--uid-input-format"));
+            rootCommand.Add(new Option<UidFormat>("--uid-output-format"));
+
+            Console.WriteLine("This program will monitor all SmartCard readers or keyboard and send Uid's to Clipboard.");
+            rootCommand.Handler = CommandHandler.Create<ReaderType, UidFormat, UidFormat>((readerType, uidInputFormat, uidOutputFormat) => {
+                if (readerType == ReaderType.PCSC) {
+                    UsePCSCReader();
+                } else {
+                    Console.WriteLine($"Input format {uidInputFormat}");
+                    Console.WriteLine($"Output format {uidOutputFormat}");
+                    if (uidInputFormat == UidFormat.Default) {
+                        throw new Exception("Input format cannot be default for HID devices.");
+                    }
+
+                    while (true) {
+                        string input = Console.ReadLine();
+                        if (input == string.Empty) {
+                            Console.WriteLine("Exiting");
+                            return;
+                        } else {
+                            ulong keyId = UidHelper.UidHelper.ParseUid(uidInputFormat, input, '-');
+                            string result = UidHelper.UidHelper.FormatUid(keyId, uidOutputFormat);
+                            var latestClipboardEntry = Clipboard.GetText();
+                            if (latestClipboardEntry != result) {
+                                Clipboard.SetText(result);
+                                Console.WriteLine($"Wrote {result} to the Clipboard");
+                            }
+                        }
+                    }
+                }
+            });
+
+            rootCommand.Invoke(args);
+        }
+
+        private static void UsePCSCReader() {
             // Retrieve the names of all installed readers.
             var readerNames = GetReaderNames();
 
