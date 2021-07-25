@@ -26,6 +26,9 @@ namespace UID2Clip.Windows {
 
             [Option("uid-output-format", Default = UidFormat.HEX, Required = false, HelpText = "Specify output format (**)")]
             public UidFormat UidOutputFormat { get; set; }
+
+            [Option("hex-input-separator", Default = '\0', Required = false, HelpText = "Specify separator character (if any)")]
+            public char hexInputSeparator { get; set; }
         }
 
         private static string _newUid = string.Empty;
@@ -58,13 +61,13 @@ namespace UID2Clip.Windows {
                     if (o.ReaderType == ReaderType.PCSC) {
                         UsePCSCReader(UidFormat.HEX, o.UidOutputFormat);
                     } else {
-                        UseHIDReader(o.UidInputFormat, o.UidOutputFormat);
+                        UseHIDReader(o.UidInputFormat, o.UidOutputFormat, o.hexInputSeparator);
                         return;
                     }
                 });
         }
 
-        private static void UseHIDReader(UidFormat inputFormat, UidFormat outputFormat) {
+        private static void UseHIDReader(UidFormat inputFormat, UidFormat outputFormat, char hexInputSeparator = '\0') {
             if (inputFormat == UidFormat.Default) {
                 throw new Exception("Input format cannot be default for HID devices.");
             }
@@ -80,7 +83,7 @@ namespace UID2Clip.Windows {
                     return;
                 } else {
                     try {
-                        ulong keyId = UidHelper.UidHelper.ParseUid(inputFormat, input, '-');
+                        ulong keyId = UidHelper.UidHelper.ParseUid(inputFormat, input, hexInputSeparator);
                         string result = UidHelper.UidHelper.FormatUid(keyId, outputFormat);
                         var latestClipboardEntry = Clipboard.GetText();
                         if (latestClipboardEntry != result) {
@@ -96,7 +99,7 @@ namespace UID2Clip.Windows {
             }
         }
 
-        private static void UsePCSCReader(UidFormat inputFormat = UidFormat.HEX, UidFormat outputFormat = UidFormat.HEX) {
+        private static void UsePCSCReader(UidFormat inputFormat = UidFormat.HEX, UidFormat outputFormat = UidFormat.HEX, char hexInputSeparator = '-') {
             // Retrieve the names of all installed readers.
             var readerNames = GetReaderNames();
 
@@ -119,7 +122,7 @@ namespace UID2Clip.Windows {
                 while (true) {
                     if (_dataAvailable) {
                         var latestClipboardEntry = Clipboard.GetText();
-                        ulong cardid = UidHelper.UidHelper.ParseUid(inputFormat, _newUid, '-');
+                        ulong cardid = UidHelper.UidHelper.ParseUid(inputFormat, _newUid, hexInputSeparator);
                         string formattedUid = UidHelper.UidHelper.FormatUid(cardid, outputFormat);
                         if (latestClipboardEntry != formattedUid) {
                             Clipboard.SetText(formattedUid);

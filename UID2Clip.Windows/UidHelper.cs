@@ -42,7 +42,7 @@
             }
         }
 
-        public static ulong ParseUid(UidFormat uidFormat, string input, char hexInputSeparator)
+        public static ulong ParseUid(UidFormat uidFormat, string input, char hexInputSeparator = '-')
         {
             ulong result = 0;
             string[] hexParts;

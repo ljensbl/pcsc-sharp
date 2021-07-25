@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "UID2Clip.Windows": {
+      "commandName": "Project",
+      "commandLineArgs": "--reader-type HID --uid-input-format HEX --uid-output-format HEX --hex-input-separator=-"
+    }
+  }
+}
