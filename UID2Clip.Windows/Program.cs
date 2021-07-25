@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Windows.Forms;
+using CommandLine;
 using PCSC;
 using PCSC.Exceptions;
 using PCSC.Iso7816;
@@ -16,21 +17,31 @@ namespace UID2Clip.Windows {
     };
 
     public class Program {
+        public class Options {
+            [Option("reader-type", Default = ReaderType.HID, Required = false, HelpText = "Use HID for keyboard emulating readers, use PCSC for PCSC readers.")]
+            public ReaderType ReaderType { get; set; }
+
+            [Option("uid-input-format", Default = UidFormat.Default, Required = false, HelpText = "Specify input format (**)")]
+            public UidFormat UidInputFormat { get; set; }
+
+            [Option("uid-output-format", Default = UidFormat.HEX, Required = false, HelpText = "Specify output format (**)")]
+            public UidFormat UidOutputFormat { get; set; }
+        }
+
         private static string _newUid = string.Empty;
         private static bool _dataAvailable = false;
 
         private static string FormatForOuput(string uid, OutputFormat format = OutputFormat.Hex, bool byteOrderReversed = false, int bits = 0, string separator = ":") {
             string result = string.Empty;
             var words = uid.Split('-');
-            
+
             if (byteOrderReversed) {
                 Array.Reverse(words);
             }
 
             if (format == OutputFormat.Hex) {
                 result = string.Join(separator, words);
-            }
-            else {
+            } else {
                 var hexString = string.Join("", words);
                 result = Convert.ToUInt64(hexString, 16).ToString();
             }
@@ -38,40 +49,38 @@ namespace UID2Clip.Windows {
         }
 
         [STAThread]
-        public static void Main(
-            ReaderType readerType = ReaderType.HID,
-            UidFormat uidInputFormat = UidFormat.Default,
-            UidFormat uidOutputFormat = UidFormat.HEX) {
+        public static void Main(string[] args) {
 
             Console.WriteLine("This program will monitor all SmartCard readers or keyboard and send Uid's to Clipboard.");
 
-            if (readerType == ReaderType.PCSC) {
-                UsePCSCReader();
-            }
-            else {
-                Console.WriteLine($"Input format {uidInputFormat}");
-                Console.WriteLine($"Output format {uidOutputFormat}");
-                if (uidInputFormat == UidFormat.Default) {
-                    throw new Exception("Input format cannot be default for HID devices.");
-                }
+            Parser.Default.ParseArguments<Options>(args)
+                .WithParsed<Options>(o => {
+                    if (o.ReaderType == ReaderType.PCSC) {
+                        UsePCSCReader();
+                    } else {
+                        Console.WriteLine($"Input format {o.UidInputFormat}");
+                        Console.WriteLine($"Output format {o.UidOutputFormat}");
+                        if (o.UidInputFormat == UidFormat.Default) {
+                            throw new Exception("Input format cannot be default for HID devices.");
+                        }
 
-                while (true) {
-                    string input = Console.ReadLine();
-                    if (input == string.Empty) {
-                        Console.WriteLine("Exiting");
-                        return;
-                    }
-                    else {
-                        ulong keyId = UidHelper.UidHelper.ParseUid(uidInputFormat, input, '-');
-                        string result = UidHelper.UidHelper.FormatUid(keyId, uidOutputFormat);
-                        var latestClipboardEntry = Clipboard.GetText();
-                        if (latestClipboardEntry != result) {
-                            Clipboard.SetText(result);
-                            Console.WriteLine($"Wrote {result} to the Clipboard");
+                        while (true) {
+                            string input = Console.ReadLine();
+                            if (input == string.Empty) {
+                                Console.WriteLine("Exiting");
+                                return;
+                            } else {
+                                ulong keyId = UidHelper.UidHelper.ParseUid(o.UidInputFormat, input, '-');
+                                string result = UidHelper.UidHelper.FormatUid(keyId, o.UidOutputFormat);
+                                var latestClipboardEntry = Clipboard.GetText();
+                                if (latestClipboardEntry != result) {
+                                    Clipboard.SetText(result);
+                                    Console.WriteLine($"Wrote {result} to the Clipboard");
+                                }
+                            }
                         }
                     }
-                }
-            }
+                });
         }
 
         private static void UsePCSCReader() {
